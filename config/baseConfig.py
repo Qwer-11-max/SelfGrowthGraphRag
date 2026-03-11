@@ -1,0 +1,2 @@
+knowledgeStoragePath = "knowledge_storage"
+
