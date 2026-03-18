@@ -1,2 +1,0 @@
-knowledgeStoragePath = "knowledge_storage"
-
