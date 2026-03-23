@@ -197,8 +197,9 @@ async def async_call_openai_limited(
 
         上下文:{context}
 
-        请你根据问题,选项以及上下文，分析并给出正确答案，若是上下文无法提供足够判断的依据，
+        1.请你根据问题,选项以及上下文，分析并给出正确答案，若是上下文无法提供足够判断的依据，
         那么你可以结合自身的知识进行回答。
+        2. 保持回答的语言与问题以及选项一致，比如英文问题应该用英文回答，中文问题应该用中文回答。
 
         答案应该是选项中的一个。
 
@@ -262,7 +263,7 @@ async def main():#
     milvusDB = init_milvus_vector_store_async()
     print("Milvus 初始化成功:", milvusDB.collection_name)
     
-    # all_results = all_results[:1000]  # 只处理前50条数据，方便测试和展示进度条效果
+    # all_results = all_results[:2]  # 只处理前50条数据，方便测试和展示进度条效果
 
     questions = [res['question'] for res in all_results]
     options_list = [ "[" + ", ".join(res["options"]) + "]" for res in all_results]

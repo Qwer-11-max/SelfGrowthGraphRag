@@ -47,6 +47,8 @@ class Neo4jUtils:
 
         # 处理三元组，创建关系
         for tri in json_data["triples"]:
+            if len(tri) != 3:
+                continue  # 跳过格式不正确的三元组
             sname, relRaw, oname = tri
             triples.append({"source": sname, "target": oname, "relation": relRaw})
 

@@ -17,22 +17,25 @@ PROMPT_TEMPLATES["question_with_context"] = """
 
 上下文:{context}
 
-请你根据问题,选项以及上下文，分析并给出正确答案，若是上下文无法提供足够判断的依据，
-那么你可以结合自身的知识做出回答。
-
-答案应该是选项中的一个。
-
-请按如下格式返回JSON结果:
+指南：
+1. 请仔细阅读问题、选项和上下文，确保理解每个部分的内容
+2. 上下文提供了一些可能与问题相关的信息，优先使用其中相关的上下文中的信息来分析问题和选项，可以忽略无关的上下文信息。
+3. 如果上下文无法提供足够判断的依据，那么你可以结合自身的知识做出回答
+4. 答案应该是选项中的一个，确保你的回答与提供的选项完全匹配
+5. 在分析过程中，考虑问题的背景、选项的含义以及上下文中的相关信息，进行综合判断
+6. 只返回合法JSON,格式如下:
 {{
     "answer": "选项文本",
     "questionBackground": "对问题背景的理解与分析",
     "entityInfo": {{
-        "entity1": "问题与选项中关键实体1的相关核心信息",
-        "entity2": "问题与选项中关键实体2的相关核心信息",
+        "entity1": "问题与选项中关键实体1的核心信息，不需要进行相关性分析",
+        "entity2": "问题与选项中关键实体2的核心信息，不需要进行相关性分析",
         "...": "..."
     }},
-    "reasoning": "你的简要推理过程和分析，说明你是如何得出答案的"
+    "reasoning": "总结为何选择该答案"
 }}
+7. 对于上下文中已有的信息，不用再次进行解释，直接使用即可；对于上下文中没有但对问题分析有帮助的信息，可以适当补充，但要确保补充的信息是准确且相关的
+8. json中的内容保持全英文
 """
 
 PROMPT_TEMPLATES["knowledge_graph_extraction"] = """
@@ -47,7 +50,7 @@ PROMPT_TEMPLATES["knowledge_graph_extraction"] = """
 5. 模式演化:如果发现重要的新类型,添加到new_schema_types
 6. 时间戳:为每个实体、属性和关系分配一个时间戳,表示和他们有关的时间,格式为"YYYY.MM.DD",
     如果没有明确的时间,可以根据上下文推断一个合理的时间,或者是直接置为"unknown"
-7. 提取时不用翻译,保持原文,但在返回的JSON中,属性和关系的命名要尽量规范化,去掉冗余词汇,保留核心语义
+7. 提取时不用翻译,保持原文,但在返回的JSON中,属性和关系的命名要尽量规范化,去掉冗余词汇,保留核心语义，返回的JSON使用英文填充
 8. 只返回合法JSON,不要附加解释、注释、Markdown代码块或其他额外文本
 
 文本：{chunk}
@@ -119,6 +122,8 @@ PROMPT_TEMPLATES["question_decomposition_by_schema"] = """
 
 问题：{question}
 
+选项: {options}
+
 例如对于问题:
     "In electric motor, when rotor windings fault occurs, 
     which sensor from the choices is most critical in detecting the occurrence of the failure event?"
@@ -133,7 +138,7 @@ PROMPT_TEMPLATES["question_decomposition_by_schema"] = """
     }}
 }}
 
-需要返回的JSON格式如下:
+12.需要返回的JSON格式如下:
 {{
     "sub_questions": {{
         "子问题1": "YYYY.MM.DD 或 unknown",
@@ -141,6 +146,35 @@ PROMPT_TEMPLATES["question_decomposition_by_schema"] = """
         ...
     }}
 }}
+"""
+
+PROMPT_TEMPLATES["answer_reflection"] = """
+在上一个问答当中你回答错误了，下面是你当时分析问题和选项时，使用的上下文信息以及你从中提取的实体和属性：
+
+上一次的回答：{llm_response}
+
+问题：{question}
+
+选项：{options}
+
+答案：{correct_answer}
+
+指南：
+1.重新分析这个问题，结合你自身的知识，告诉我为何要选择这个答案，并且分析一下你之前的分析过程中，哪些地方可能出现了问题，
+导致了错误的回答。请给出详细的分析过程。
+2. 你可以尝试从之前的上下文中，找到一些之前没有充分利用的信息，或者是之前没有正确理解的信息，来帮助你分析这个问题。
+3. 你也可以尝试补充一些之前没有提到但对分析这个问题有帮助的信息，但要确保补充的信息是准确且相关的。
+4. 只返回合法JSON,格式如下:
+{{
+    "questionBackground": "对问题背景的理解与分析",
+    "entityInfo": {{
+        "entity1": "问题与选项中关键实体1的相关核心信息，分析之前可能没有充分利用或者理解的信息",
+        "entity2": "问题与选项中关键实体2的相关核心信息，分析之前可能没有充分利用或者理解的信息",
+        "...": "..."
+    }},
+    "reasoning": "一句话总结为何选择正确答案，并分析之前错误的原因"
+}}
+
 """
 
 QUERY_TEMPLATES = dict()

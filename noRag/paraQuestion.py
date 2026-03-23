@@ -60,9 +60,9 @@ async def async_call_openai(index: int, prompt: str) -> tuple[int, str]:
     try:
         response = await async_client.chat.completions.create(
             model="qwen3.5-plus-2026-02-15",
-            extra_body={"enable_thinking": False},
+            extra_body={"enable_thinking": True},
             messages=[{"role": "user", "content": prompt}],
-            timeout=60  # 设置超时时间，避免无限等待
+            timeout=120  # 设置超时时间，避免无限等待
         )
         return (index, response.choices[0].message.content.strip())
     except Exception as e:
@@ -79,7 +79,7 @@ async def main():
     csv_path = r"/mnt/e/repository/data/datasets/ibm-research/FailureSensorIQ/single_true_multi_choice_qa.csv"
     all_results = extract_all_questions_data(csv_path)
 
-    # all_results = all_results[:1000]  # 只处理前20条数据，方便测试和展示进度条效果
+    all_results = all_results[:1000]  # 只处理前20条数据，方便测试和展示进度条效果
 
     questions = [res['question'] for res in all_results]
     options_list = [ "[" + ", ".join(res["options"]) + "]" for res in all_results]

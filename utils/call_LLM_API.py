@@ -7,10 +7,13 @@ import os
 import threading
 from openai import OpenAI,AsyncOpenAI
 
+
 class call_LLM_API:
     def __init__(self, api_key=None, base_url=None):
         self.api_key = api_key or os.getenv("DASHSCOPE_API_KEY")
         self.base_url = base_url or os.getenv("DASHSCOPE_BASE_URL", "https://api.openai.com/v1")
+        self.prompt_tokens_used = 0
+        self.completion_tokens_used = 0
         self.total_tokens_used = 0
         self._token_lock = threading.Lock()
         self.client = OpenAI(
@@ -22,23 +25,29 @@ class call_LLM_API:
             base_url=self.base_url
         )
 
-    def _extract_total_tokens(self, response):
-        if getattr(response, "usage", None) is None:
-            return 0
+    def _extract_token_usage(self, response):
+        usage = getattr(response, "usage", None)
+        if usage is None:
+            return 0, 0, 0
 
-        total_tokens = getattr(response.usage, "total_tokens", None)
-        if total_tokens is not None:
-            return int(total_tokens)
+        prompt_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
+        completion_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
 
-        prompt_tokens = int(getattr(response.usage, "prompt_tokens", 0) or 0)
-        completion_tokens = int(getattr(response.usage, "completion_tokens", 0) or 0)
-        return prompt_tokens + completion_tokens
+        total_tokens = getattr(usage, "total_tokens", None)
+        if total_tokens is None:
+            total_tokens = prompt_tokens + completion_tokens
+        else:
+            total_tokens = int(total_tokens)
 
-    def _add_tokens(self, tokens):
-        if tokens <= 0:
+        return prompt_tokens, completion_tokens, total_tokens
+
+    def _add_tokens(self, prompt_tokens, completion_tokens, total_tokens):
+        if prompt_tokens <= 0 and completion_tokens <= 0 and total_tokens <= 0:
             return
         with self._token_lock:
-            self.total_tokens_used += tokens
+            self.prompt_tokens_used += prompt_tokens
+            self.completion_tokens_used += completion_tokens
+            self.total_tokens_used += total_tokens
 
     def call(self, prompt, model="qwen3.5-plus-2026-02-15", timeout=60, enable_thinking=False, count_tokens=True):
         """
@@ -65,26 +74,31 @@ class call_LLM_API:
             )
 
             if count_tokens:
-                self._add_tokens(self._extract_total_tokens(response))
+                prompt_tokens, completion_tokens, total_tokens = self._extract_token_usage(response)
+                self._add_tokens(prompt_tokens, completion_tokens, total_tokens)
 
             return response.choices[0].message.content.strip()
         except Exception as e:
             raise RuntimeError(f"调用LLM接口失败: {str(e)}")
 
-    def get_total_tokens_used(self):
+    def print_total_tokens_used(self):
         """
-        获取当前实例累计已使用的token数量
-
-        :return: 累计token数
+        打印当前实例累计已使用的输入/输出/总token数量
         """
         with self._token_lock:
-            return self.total_tokens_used
+            print(
+                f"Prompt tokens used: {self.prompt_tokens_used},\n"
+                f"Completion tokens used: {self.completion_tokens_used},\n" 
+                f"Total tokens used: {self.total_tokens_used}"
+            )
     
     def reset_total_tokens_used(self):
         """
         重置累计token数量为0
-        """        
+        """
         with self._token_lock:
+            self.prompt_tokens_used = 0
+            self.completion_tokens_used = 0
             self.total_tokens_used = 0
 
     async def call_async(self, prompt, model="qwen3.5-plus-2026-02-15", timeout=60, enable_thinking=False, count_tokens=True):
@@ -111,7 +125,8 @@ class call_LLM_API:
             )
 
             if count_tokens:
-                self._add_tokens(self._extract_total_tokens(response))
+                prompt_tokens, completion_tokens, total_tokens = self._extract_token_usage(response)
+                self._add_tokens(prompt_tokens, completion_tokens, total_tokens)
 
             return response.choices[0].message.content.strip()
         except Exception as e:
